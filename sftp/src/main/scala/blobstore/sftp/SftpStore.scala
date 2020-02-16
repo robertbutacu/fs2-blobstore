@@ -140,7 +140,13 @@ final class SftpStore[F[_]](
     }
   }
 
-  implicit def _pathToString(path: Path): String = s"$absRoot$SEP${path.root}$SEP${path.key}"
+  implicit def _pathToString(path: Path): String = {
+    val c = List(absRoot, path.root, path.key).filter(_.nonEmpty).mkString("/")
+
+    // We don't offer an API to change CWD, assume CWD == user's home directory
+    val result = if (!c.startsWith("/") && !c.startsWith(".")) s"./$c" else c
+    result.replaceAll("//+", "/")
+  }
 
   private def mkdirs(path: Path, channel: ChannelSftp): F[Unit] =
     blocker.delay {
@@ -156,6 +162,7 @@ final class SftpStore[F[_]](
 object SftpStore {
   /**
     * Safely initialize SftpStore and disconnect ChannelSftp and Session upon finish.
+    *
     * @param fa F[ChannelSftp] how to connect to SFTP server
     * @return Stream[ F, SftpStore[F] ] stream with one SftpStore, sftp channel will disconnect once stream is done.
     */

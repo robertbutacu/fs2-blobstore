@@ -51,6 +51,27 @@ class SftpStoreTest extends AbstractStoreTest {
   override val store: Store[IO] = new SftpStore[IO]("/", session, blocker, mVar, None, 10000)
   override val root: String = "sftp_tests"
 
+  behavior of "Sftp store"
+
+  it should "write to file in no directory" in {
+    val path = Path("baz.txt")
+    val program = fs2.Stream.emit("foo")
+      .through(fs2.text.utf8Encode)
+      .covary[IO]
+      .through(store.put(path))
+      .compile.drain
+
+    program.unsafeRunSync()
+
+    val contents = store.get(path, 1024)
+      .through(fs2.text.utf8Decode)
+      .compile
+      .toList
+      .unsafeRunSync()
+
+    contents mustBe List("foo")
+  }
+
   // remove dirs created by AbstractStoreTest
   override def afterAll(): Unit = {
     super.afterAll()
