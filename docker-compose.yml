@@ -7,7 +7,6 @@ services:
 
     volumes:
       - ./tmp/sftp-store-root:/home/blob
-      - ./sftp/src/test/resources/docker-compose/homedir.sh:/etc/sftp.d/homedir.sh
 
     command: "blob:password:::sftp_tests"
 

@@ -25,7 +25,7 @@ import com.jcraft.jsch.{ChannelSftp, JSch}
 
 class SftpStoreTest extends AbstractStoreTest {
 
-  val session = try {
+  val session = IO {
     val jsch = new JSch()
 
     val session = jsch.getSession("blob", "sftp-container", 22)
@@ -39,21 +39,23 @@ class SftpStoreTest extends AbstractStoreTest {
     session.connect()
 
     session
-  } catch {
-    // this is UGLY!!! but just want to ignore errors if you don't have sftp container running
-    case e: Throwable =>
-      e.printStackTrace()
-      null
   }
 
   private val rootDir = Paths.get("tmp/sftp-store-root/").toAbsolutePath.normalize
   val mVar = MVar.empty[IO, ChannelSftp].unsafeRunSync()
-  override val store: Store[IO] = new SftpStore[IO]("/", session, blocker, mVar, None, 10000)
+  override val store: SftpStore[IO] = new SftpStore[IO]("/", session.unsafeRunSync(), blocker, mVar, None, 10000)
   override val root: String = "sftp_tests"
 
   behavior of "Sftp store"
 
   it should "write to file in no directory" in {
+    val s = session.unsafeRunSync()
+
+    // The use home directory is not writable, so need to change CWD for path to be valid
+    val ch = s.openChannel("sftp").asInstanceOf[ChannelSftp]
+    ch.cd("sftp_tests")
+
+    val store: Store[IO] = new SftpStore[IO]("", s, blocker, mVar, None, 10000)
     val path = Path("baz.txt")
     val program = fs2.Stream.emit("foo")
       .through(fs2.text.utf8Encode)
@@ -77,7 +79,7 @@ class SftpStoreTest extends AbstractStoreTest {
     super.afterAll()
 
     try {
-      session.disconnect()
+      store.session.disconnect()
     } catch {
       case _: Throwable =>
     }

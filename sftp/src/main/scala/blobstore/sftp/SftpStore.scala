@@ -31,7 +31,7 @@ import fs2.concurrent.Queue
 
 final class SftpStore[F[_]](
   absRoot: String,
-  session: Session,
+  protected[sftp] val session: Session,
   blocker: Blocker,
   mVar: MVar[F, ChannelSftp],
   semaphore: Option[Semaphore[F]],
