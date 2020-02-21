@@ -53,6 +53,7 @@ class SftpStoreTest extends AbstractStoreTest {
 
     // The use home directory is not writable, so need to change CWD for path to be valid
     val ch = s.openChannel("sftp").asInstanceOf[ChannelSftp]
+    ch.connect(5000)
     ch.cd("sftp_tests")
 
     val store: Store[IO] = new SftpStore[IO]("", s, blocker, mVar, None, 10000)
